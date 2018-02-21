@@ -8,19 +8,12 @@ use Drupal\Core\Render\Element;
 use Drupal\extra_field\Plugin\ExtraFieldDisplayFormattedInterface;
 
 /**
- * Base class for Extra field Plus Display plugins with field wrapper output.
+ * Base class for Extra Field Plus Display plugins with field wrapper output.
  */
 abstract class ExtraFieldPlusDisplayFormattedBase extends ExtraFieldPlusDisplayBase implements ExtraFieldPlusDisplayInterface, ExtraFieldDisplayFormattedInterface {
 
   /**
    * Flag to indicate that the extra field has no content.
-   *
-   * Set this flag when the render elements returned by ::viewElements only
-   * contains non-visible render data such as #cache or #attached but does not
-   * contain actual renderable data such as #markup, #theme or #item.
-   *
-   * When this flag is set, the render elements will not be wrapped in a field
-   * wrapper.
    *
    * @var bool
    */
@@ -32,13 +25,6 @@ abstract class ExtraFieldPlusDisplayFormattedBase extends ExtraFieldPlusDisplayB
    * @var string
    */
   protected $langcode = LanguageInterface::LANGCODE_NOT_SPECIFIED;
-
-  /**
-   * The language manager.
-   *
-   * @var \Drupal\Core\Language\LanguageManagerInterface
-   */
-  protected $languageManager;
 
   /**
    * {@inheritdoc}

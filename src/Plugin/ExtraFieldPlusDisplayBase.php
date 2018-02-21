@@ -5,7 +5,7 @@ namespace Drupal\extra_field_plus\Plugin;
 use Drupal\extra_field\Plugin\ExtraFieldDisplayBase;
 
 /**
- * Base class for Extra field Plus Display plugins.
+ * Base class for Extra Field Plus Display plugins.
  */
 abstract class ExtraFieldPlusDisplayBase extends ExtraFieldDisplayBase implements ExtraFieldPlusDisplayInterface {
 
