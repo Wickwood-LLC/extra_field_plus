@@ -5,7 +5,6 @@
  * Main file for extra_field_plus module.
  */
 
-use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 
@@ -19,7 +18,7 @@ function extra_field_plus_help($route_name, RouteMatchInterface $route_match) {
       $output .= '<h3>' . t('About') . '</h3>';
       $output .= '<p>' . t('This module provides base plugins and interface for extra fields with editable display settings, like normal fields formatter settings.') . '</p>';
       $output .= '<h3>' . t('Uses') . '</h3>';
-      $output .= '<p>' . t('To provide the extra field plugin with settings you must at least extend the <code>ExtraFieldPlusDisplayInterface</code>.') . '</p>';
+      $output .= '<p>' . t('To provide the extra field plugin with settings you must at least implement the <code>ExtraFieldPlusDisplayInterface</code>.') . '</p>';
       $output .= '<p>' . t('But there are two base plugins which can help you with this. Just extend <code>ExtraFieldPlusDisplayBase</code> or <code>ExtraFieldPlusDisplayFormattedBase</code> plugins.') . '</p>';
       $output .= '<p>' . t('All yours extra field plugins have to be placed in <code>your_custom_module/src/Plugin/ExtraField/Display</code> folder.') . '</p>';
 
@@ -47,7 +46,7 @@ function extra_field_plus_form_entity_view_display_edit_form_alter(array &$form,
   $extra = \Drupal::service('plugin.manager.extra_field_display')
     ->fieldInfo();
 
-  /** @var EntityViewDisplayInterface $entity_view_display */
+  /** @var Drupal\Core\Entity\Display\EntityViewDisplayInterface $entity_view_display */
   $entity_view_display = \Drupal::entityTypeManager()
     ->getStorage('entity_view_display')
     ->load($entity_type . '.' . $bundle . '.' . $view_mode);
@@ -71,6 +70,13 @@ function extra_field_plus_form_entity_view_display_edit_form_alter(array &$form,
   $user_input = $form_state->getUserInput();
   foreach ($form['#extra'] as $name) {
     if (isset($extra[$entity_type][$bundle]['display'][$name])) {
+
+      $settings_form = \Drupal::service('plugin.manager.extra_field_plus.form')
+        ->getSettingsForm($name);
+      // Don't need any actions if extra field doesn't have settings form.
+      if (!$settings_form) {
+        continue;
+      }
 
       // Flag that extra field have settings.
       $settings_added = TRUE;
@@ -96,11 +102,25 @@ function extra_field_plus_form_entity_view_display_edit_form_alter(array &$form,
         }
         else {
           $settings = isset($component['settings']) ? $component['settings'] : [];
+          // Set field settings to the form state storage. We will need them
+          // in submit handler or while editing the settings a few times.
+          if (!$form_state->get($name)) {
+            $form_state->set($name, $settings);
+          }
+          // Get form default values from storage.
+          else {
+            $settings = $form_state->get($name);
+          }
+
+          // Set to the form state storage from user input
+          // after editing another field settings.
+          if ($form_state->get('plugin_settings_edit')
+            && $form_state->get('plugin_settings_edit') !== $name) {
+            $settings = isset($user_input['fields'][$name]['settings_edit_form']['settings']) ? $user_input['fields'][$name]['settings_edit_form']['settings'] : $settings;
+            $form_state->set($name, $settings);
+          }
         }
       }
-
-      $settings_form = \Drupal::service('plugin.manager.extra_field_plus.form')
-        ->getSettingsForm($name);
     }
     else {
       continue;
@@ -117,75 +137,73 @@ function extra_field_plus_form_entity_view_display_edit_form_alter(array &$form,
       '#field_name' => $name,
     ];
 
-    if (!empty($settings_form)) {
-      $settings_edit = $base_button + [
-        '#type' => 'image_button',
-        '#attributes' => [
-          'class' => ['field-plugin-settings-edit'],
-          'alt' => t('Edit'),
-        ],
-        '#src' => 'core/misc/icons/787878/cog.svg',
-        '#name' => $name . '_settings_edit',
-        '#op' => 'edit',
-        '#prefix' => '<div class="field-plugin-settings-edit-wrapper">',
-        '#suffix' => '</div>',
-      ];
-      if ($form_state->get('plugin_settings_edit') == $name) {
-        $value = $form_state->get($name);
-        foreach ($settings_form as $key => &$element) {
-          if (!empty($value)) {
-            $element['#default_value'] = isset($value[$key]) ? $value[$key] : $element['#default_value'];
-          }
-          else {
-            $element['#default_value'] = isset($settings[$key]) ? $settings[$key] : $element['#default_value'];
-          }
+    $settings_edit = $base_button + [
+      '#type' => 'image_button',
+      '#attributes' => [
+        'class' => ['field-plugin-settings-edit'],
+        'alt' => t('Edit'),
+      ],
+      '#src' => 'core/misc/icons/787878/cog.svg',
+      '#name' => $name . '_settings_edit',
+      '#op' => 'edit',
+      '#prefix' => '<div class="field-plugin-settings-edit-wrapper">',
+      '#suffix' => '</div>',
+    ];
+    if ($form_state->get('plugin_settings_edit') == $name) {
+      $value = $form_state->get($name);
+      foreach ($settings_form as $key => &$element) {
+        if (!empty($value)) {
+          $element['#default_value'] = isset($value[$key]) ? $value[$key] : $element['#default_value'];
         }
-        $row['plugin']['settings_edit_form'] = [];
+        else {
+          $element['#default_value'] = isset($settings[$key]) ? $settings[$key] : $element['#default_value'];
+        }
+      }
+      $row['plugin']['settings_edit_form'] = [];
 
-        $row['plugin']['#cell_attributes'] = ['colspan' => 1];
-        $row['plugin']['settings_edit_form'] = [
-          '#type' => 'container',
-          '#attributes' => ['class' => ['field-plugin-settings-edit-form']],
-          '#parents' => ['fields', $name, 'settings_edit_form'],
-          'label' => [
-            '#markup' => t('Display settings:'),
+      $row['plugin']['#cell_attributes'] = ['colspan' => 1];
+      $row['plugin']['settings_edit_form'] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['field-plugin-settings-edit-form']],
+        '#parents' => ['fields', $name, 'settings_edit_form'],
+        'label' => [
+          '#markup' => t('Display settings:'),
+        ],
+        'settings' => $settings_form,
+        'actions' => [
+          '#type' => 'actions',
+          'save_settings' => $base_button + [
+            '#type' => 'submit',
+            '#button_type' => 'primary',
+            '#name' => $name . '_plugin_settings_update',
+            '#value' => t('Update'),
+            '#op' => 'update',
           ],
-          'settings' => $settings_form,
-          'actions' => [
-            '#type' => 'actions',
-            'save_settings' => $base_button + [
-              '#type' => 'submit',
-              '#button_type' => 'primary',
-              '#name' => $name . '_plugin_settings_update',
-              '#value' => t('Update'),
-              '#op' => 'update',
-            ],
-            'cancel_settings' => $base_button + [
-              '#type' => 'submit',
-              '#name' => $name . '_plugin_settings_cancel',
-              '#value' => t('Cancel'),
-              '#op' => 'cancel',
-              '#limit_validation_errors' => [['fields', $name, 'type']],
-            ],
+          'cancel_settings' => $base_button + [
+            '#type' => 'submit',
+            '#name' => $name . '_plugin_settings_cancel',
+            '#value' => t('Cancel'),
+            '#op' => 'cancel',
+            '#limit_validation_errors' => [['fields', $name, 'type']],
           ],
-        ];
-        $row['#attributes']['class'][] = 'field-plugin-settings-editing';
-      }
-      elseif ($form_state->get('plugin_settings_update') == $name) {
-        $storage = $user_input['fields'][$name]['settings_edit_form']['settings'];
-        $form_state->set($name, $storage);
-        $row['settings_edit'] = $settings_edit;
-        $row['settings_summary'] = [
-          '#markup' => t('This extra field has settings'),
-        ];
-        $form_state->set('plugin_settings_update', NULL);
-      }
-      else {
-        $row['settings_edit'] = $settings_edit;
-        $row['settings_summary'] = [
-          '#markup' => t('This extra field has settings'),
-        ];
-      }
+        ],
+      ];
+      $row['#attributes']['class'][] = 'field-plugin-settings-editing';
+    }
+    elseif ($form_state->get('plugin_settings_update') == $name) {
+      $storage = $user_input['fields'][$name]['settings_edit_form']['settings'];
+      $form_state->set($name, $storage);
+      $row['settings_edit'] = $settings_edit;
+      $row['settings_summary'] = [
+        '#markup' => t('This extra field has settings'),
+      ];
+      $form_state->set('plugin_settings_update', NULL);
+    }
+    else {
+      $row['settings_edit'] = $settings_edit;
+      $row['settings_summary'] = [
+        '#markup' => t('This extra field has settings'),
+      ];
     }
   }
 
@@ -212,7 +230,7 @@ function extra_field_plus_form_entity_view_display_edit_form_submit(array $form,
   $view_mode = \Drupal::routeMatch()
     ->getParameter('view_mode_name');
 
-  /** @var EntityViewDisplayInterface $view_display */
+  /** @var Drupal\Core\Entity\Display\EntityViewDisplayInterface $view_display */
   $view_display = \Drupal::entityTypeManager()
     ->getStorage('entity_view_display')
     ->load($entity_type . '.' . $bundle . '.' . $view_mode);
@@ -239,8 +257,8 @@ function extra_field_plus_form_entity_view_display_edit_form_submit(array $form,
           $settings = $user_input['fields'][$name]['settings_edit_form']['settings'];
         }
         // Get from storage.
-        elseif ($value = $form_state->get($name)) {
-          $settings = $value;
+        elseif ($form_state->get($name)) {
+          $settings = $form_state->get($name);
         }
         // Get from display mode settings.
         else {
