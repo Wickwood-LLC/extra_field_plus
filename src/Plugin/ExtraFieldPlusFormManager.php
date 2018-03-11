@@ -59,4 +59,25 @@ class ExtraFieldPlusFormManager extends DefaultPluginManager {
     return $plugin->getSettingsForm();
   }
 
+  /**
+   * Checks if extra field has settings form.
+   *
+   * @param string $plugin_id
+   *   The extra field plugin id.
+   *
+   * @return bool
+   *   True if plugin has form, false otherwise.
+   */
+  public function hasSettingsForm($plugin_id) {
+    try {
+      $plugin = $this->getFactory()->createInstance($plugin_id);
+    }
+    catch (Exception $e) {
+      // Return false for wrong plugins.
+      return FALSE;
+    }
+
+    return !empty($plugin->getSettingsForm()) ? TRUE : FALSE;
+  }
+
 }
