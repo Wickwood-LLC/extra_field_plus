@@ -6,7 +6,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\extra_field\Plugin\ExtraFieldDisplayBase;
 
 /**
- * Base class for Extra Field Plus Display plugins.
+ * Base class for Extra field Plus Display plugins.
  */
 abstract class ExtraFieldPlusDisplayBase extends ExtraFieldDisplayBase implements ExtraFieldPlusDisplayInterface {
 
@@ -20,14 +20,24 @@ abstract class ExtraFieldPlusDisplayBase extends ExtraFieldDisplayBase implement
     $display = $this->getEntityViewDisplay();
     $component = $display->getComponent($field_id);
 
+    $default_settings = (array) $this->getDefaultFormValues();
     if (!empty($component['settings'])) {
-      $settings = $component['settings'];
+      $settings = array_merge($default_settings, array_intersect_key($component['settings'], $default_settings));
     }
     else {
-      $settings = (array) $this->getDefaultFormValues();
+      $settings = $default_settings;
     }
 
     return $settings;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSetting($name) {
+    $settings = $this->getSettings();
+
+    return isset($settings[$name]) ? $settings[$name] : NULL;
   }
 
   /**

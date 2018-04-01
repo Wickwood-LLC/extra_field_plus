@@ -18,6 +18,17 @@ interface ExtraFieldPlusDisplayInterface extends ExtraFieldDisplayInterface {
   public function getSettings();
 
   /**
+   * Returns field setting.
+   *
+   * @param string $name
+   *   Setting name.
+   *
+   * @return mixed|null
+   *   The field setting or NULL if does not exist.
+   */
+  public function getSetting($name);
+
+  /**
    * Returns field settings form.
    *
    * @return array
@@ -31,7 +42,7 @@ interface ExtraFieldPlusDisplayInterface extends ExtraFieldDisplayInterface {
    *
    * @return array
    *   The form values.
-   *   Example: [key_1 => value_1, key_2 => value_2, ...].
+   *   Example: [key_1 => value_1, key_2 => value_2,...].
    */
   public function getDefaultFormValues();
 
