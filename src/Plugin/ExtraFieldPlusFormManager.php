@@ -41,8 +41,8 @@ class ExtraFieldPlusFormManager extends DefaultPluginManager {
    *   Array with form fields or empty array.
    */
   public function getSettingsForm($field_name) {
-    if (strpos($field_name, 'extra_field_') === 0) {
-      $plugin_id = str_replace('extra_field_', '', $field_name);
+    if (substr($field_name, 0, 12) === 'extra_field_') {
+      $plugin_id = substr($field_name, 12);
     }
     else {
       return [];
