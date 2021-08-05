@@ -2,7 +2,6 @@ name: Extra Field Settings Provider
 type: module
 description: 'Provides ability to add display settings form for extra field, like field formatter settings.'
 core_version_requirement: ^8 || ^9
-core: 8.x
 dependencies:
   - drupal:field
   - extra_field:extra_field
